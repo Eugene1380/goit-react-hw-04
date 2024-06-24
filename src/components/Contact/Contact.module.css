@@ -1,0 +1,36 @@
+.contact {
+    color:black;
+}
+
+.user {
+    min-width: 320px;
+    width: 345px;
+    max-height: 80px;
+    border: 1px solid black;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+.info {
+    color: black;
+    width: 220px;
+    height: 80px;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.btn_delete {
+    max-width: 150px;
+    max-height: 40px;
+    align-items: center;
+    border-radius: 10px;
+    border: 1px solid black;
+    padding:10px;
+    font-weight: 500;
+    font-size: 16px;
+    font-weight: 500;
+    background-color: lightgray;
+}
