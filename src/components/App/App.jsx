@@ -1,59 +1,104 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import css from './App.module.css';
 
-import ContactList from '../ContactList/ContactList';
-import ContactForm from '../ContactForm/ContactForm';
-import SearchBox from '../SearchBox/SearchBox';
+import getImages from '../unsplash-api';
+import ImageGallery from '../ImageGallery/ImageGallery';
+import ImageModal from '../ImageModal/ImageModal';
+import Loader from '../Loader/Loader';
+import LoadMoreBtn from '../LoadMoreBtn/LoadMoreBtn';
+import SearchBar from '../SearchBar/SearchBar';
+import ErrorMessage from '../ErrorMessage/ErrorMessage';
 
-const initialContactsList = [
-  { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-  { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-  { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-  { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-];
-
-const initialContactsVisible = () => {
-  const savedContactsList = localStorage.getItem('contacts-list');
-  return savedContactsList !== null
-    ? JSON.parse(savedContactsList)
-    : initialContactsList;
+const modalInitialParams = {
+  isOpen: false,
+  url: '',
+  description: '',
 };
 
-// export default function App() {
-const App = () => {
-  const [contacts, setContacts] = useState(initialContactsVisible);
-  const [filterName, setFilterName] = useState('');
+export default function App() {
+    const [searchImage, setSearchImage] = useState('');
+    const [images, setImages] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isError, setIsError] = useState(false);
+    const [page, setPage] = useState(1);
+    const [showLoadMoreBtn, setShowLoadMoreBtn] = useState(false);
+    const [modalParams, setModalParams] = useState(modalInitialParams);
 
-  useEffect(() => {
-    localStorage.setItem('contacts-list', JSON.stringify(contacts));
-  }, [contacts]);
+    const appRef = useRef();
 
-  const addContact = (newContact) => {
-    setContacts((prevContacts) => {
-      return [...prevContacts, newContact];
-    });
-  }
+    useEffect(() => {
+        if (searchImage === '') {
+            return;
+        }
+    
+        async function getData() {
+            try {
+                setIsLoading(true);
+                setIsError(false);
+                const { results, total_pages } = await getImages(searchImage, page);
+                setImages(prevImages => {
+                return [...prevImages, ...results];
+                });
+                setShowLoadMoreBtn(total_pages && total_pages !== page);
+            } catch (error) {
+                setIsError(true);
+            } finally {
+                setIsLoading(false);
+            }
+        }
 
-  const deleteContact = (contactId) => {
-    setContacts((prevContacts) => {
-      return prevContacts.filter((contact) => contact.id !== contactId);
-    });
-  }
+        getData();
+    }, [searchImage, page]
+    );
+          
+    const handleSearch = newImage => {
+        setSearchImage(newImage);
+        setPage(1);
+        setImages([]);
+    };
+    
+    const handleLoadMoreClick = () => {
+        setPage(page + 1);
+    };
 
-  const visibleContacts = contacts.filter(contact =>
-    contact.name.toLowerCase().includes(filterName.toLowerCase())
-  );
-  
-  return (
-    <div className={css.container}>
-      <h1 className={css.title}>Phonebook</h1>
-      <ContactForm onAdd={addContact} />
-      <SearchBox value={filterName} onSearch={setFilterName} />
-      <ContactList
-        contacts={visibleContacts}
-        onDelete={deleteContact} />
-    </div>
-  );
-};
+    const handleImageClick = (url, description) => {
+        setModalParams({ isOpen: true, url, description });
+    };
 
-export default App;
+    const handleModalClose = () => {
+        setModalParams(modalInitialParams);
+  };
+
+    useEffect(() => {
+        if (page === 1) return;
+
+    appRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, [images, page]);
+
+    return (
+        <div ref={appRef}>
+            <h1 className={css.title}>Search Image Service</h1>
+            <SearchBar onSearch={handleSearch} />
+
+            {isError && <ErrorMessage />}
+            
+            {images.length > 0 && (
+                <ImageGallery cards={images} onImageClick={handleImageClick} />
+            )}
+
+            {images.length > 0 && !isLoading && showLoadMoreBtn && (
+                <LoadMoreBtn onClick={handleLoadMoreClick} />
+            )}
+            
+            {isLoading && <Loader />}
+                {modalParams && (
+                    <ImageModal
+                        url={modalParams.url}
+                        description={modalParams.description}
+                        isOpen={modalParams.isOpen}
+                        onClose={handleModalClose}
+                    />
+                )}
+        </div>
+    );
+}
